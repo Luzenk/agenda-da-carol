@@ -29,7 +29,7 @@ export default function AdminDashboard() {
       const [statsData, todayData, pendingData] = await Promise.all([
         statsRes.json(),
         todayRes.json(),
-        pendingData.json(),
+        pendingRes.json(),
       ]);
 
       setStats(statsData);
