@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Package, Plus, Edit, Trash2, Clock, DollarSign, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Package, Plus, Edit, Trash2, Clock, DollarSign, Loader2, X, Image as ImageIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
@@ -25,6 +25,7 @@ interface Service {
   id: number;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   active: boolean;
   variants: ServiceVariant[];
 }
@@ -41,6 +42,7 @@ export default function ServicosPage() {
   const [serviceForm, setServiceForm] = useState({
     name: '',
     description: '',
+    imageUrl: '',
     active: true
   });
 
@@ -70,6 +72,11 @@ export default function ServicosPage() {
   };
 
   const handleSaveService = async () => {
+    if (!serviceForm.name) {
+      toast.error('Nome do serviço é obrigatório');
+      return;
+    }
+
     try {
       const url = editingService 
         ? `/api/admin/services/${editingService.id}`
@@ -119,6 +126,10 @@ export default function ServicosPage() {
 
   const handleSaveVariant = async () => {
     if (!selectedServiceForVariant) return;
+    if (!variantForm.name || !variantForm.durationMin || !variantForm.price) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
 
     try {
       const url = editingVariant
@@ -176,6 +187,7 @@ export default function ServicosPage() {
       setServiceForm({
         name: service.name,
         description: service.description || '',
+        imageUrl: service.imageUrl || '',
         active: service.active
       });
     } else {
@@ -202,7 +214,7 @@ export default function ServicosPage() {
   };
 
   const resetServiceForm = () => {
-    setServiceForm({ name: '', description: '', active: true });
+    setServiceForm({ name: '', description: '', imageUrl: '', active: true });
     setEditingService(null);
   };
 
@@ -222,7 +234,7 @@ export default function ServicosPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Serviços</h1>
           <p className="text-gray-600">Gerencie seus serviços e variantes</p>
@@ -237,35 +249,46 @@ export default function ServicosPage() {
         {services.map(service => (
           <Card key={service.id}>
             <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    {service.name}
-                    {!service.active && (
-                      <Badge variant="secondary">Inativo</Badge>
-                    )}
-                  </CardTitle>
-                  {service.description && (
-                    <CardDescription className="mt-2">
-                      {service.description}
-                    </CardDescription>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openServiceDialog(service)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteService(service.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+              <div className="flex flex-col md:flex-row gap-4">
+                {service.imageUrl && (
+                  <img
+                    src={service.imageUrl}
+                    alt={service.name}
+                    className="w-full md:w-32 h-32 object-cover rounded-lg"
+                  />
+                )}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        {service.name}
+                        {!service.active && (
+                          <Badge variant="secondary">Inativo</Badge>
+                        )}
+                      </CardTitle>
+                      {service.description && (
+                        <CardDescription className="mt-2">
+                          {service.description}
+                        </CardDescription>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openServiceDialog(service)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteService(service.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -356,7 +379,7 @@ export default function ServicosPage() {
 
       {/* Service Dialog */}
       <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {editingService ? 'Editar Serviço' : 'Novo Serviço'}
@@ -367,12 +390,13 @@ export default function ServicosPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="service-name">Nome do Serviço</Label>
+              <Label htmlFor="service-name">Nome do Serviço *</Label>
               <Input
                 id="service-name"
                 value={serviceForm.name}
                 onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
                 placeholder="Ex: Box Braids"
+                required
               />
             </div>
             <div>
@@ -381,9 +405,40 @@ export default function ServicosPage() {
                 id="service-description"
                 value={serviceForm.description}
                 onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
-                placeholder="Descrição do serviço"
+                placeholder="Descrição do serviço para o site público"
                 rows={3}
               />
+            </div>
+            <div>
+              <Label htmlFor="service-image">Foto do Serviço (URL)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="service-image"
+                  value={serviceForm.imageUrl}
+                  onChange={(e) => setServiceForm({ ...serviceForm, imageUrl: e.target.value })}
+                  placeholder="https://exemplo.com/foto.jpg"
+                />
+                {serviceForm.imageUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setServiceForm({ ...serviceForm, imageUrl: '' })}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              {serviceForm.imageUrl && (
+                <img
+                  src={serviceForm.imageUrl}
+                  alt="Preview"
+                  className="w-full h-48 object-cover rounded-lg mt-2"
+                />
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Esta foto será exibida no site público
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -405,17 +460,18 @@ export default function ServicosPage() {
               {editingVariant ? 'Editar Variante' : 'Nova Variante'}
             </DialogTitle>
             <DialogDescription>
-              Preencha as informações da variante
+              Preencha as informações da variante (tamanho, complexidade, etc.)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="variant-name">Nome da Variante</Label>
+              <Label htmlFor="variant-name">Nome da Variante *</Label>
               <Input
                 id="variant-name"
                 value={variantForm.name}
                 onChange={(e) => setVariantForm({ ...variantForm, name: e.target.value })}
-                placeholder="Ex: Tamanho Médio"
+                placeholder="Ex: Tamanho Médio, Simples, Com Jumbo"
+                required
               />
             </div>
             <div>
@@ -430,24 +486,31 @@ export default function ServicosPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="variant-duration">Duração (minutos)</Label>
+                <Label htmlFor="variant-duration">Duração (minutos) *</Label>
                 <Input
                   id="variant-duration"
                   type="number"
+                  min="0"
                   value={variantForm.durationMin}
                   onChange={(e) => setVariantForm({ ...variantForm, durationMin: e.target.value })}
                   placeholder="180"
+                  required
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tempo que leva para fazer o serviço
+                </p>
               </div>
               <div>
-                <Label htmlFor="variant-price">Preço (R$)</Label>
+                <Label htmlFor="variant-price">Preço (R$) *</Label>
                 <Input
                   id="variant-price"
                   type="number"
+                  min="0"
                   step="0.01"
                   value={variantForm.price}
                   onChange={(e) => setVariantForm({ ...variantForm, price: e.target.value })}
                   placeholder="150.00"
+                  required
                 />
               </div>
             </div>

@@ -80,7 +80,9 @@ model Client {
   phone              String        @unique
   email              String?
   cpf                String?
+  gender             String?       // "M", "F", "Other"
   birthDate          DateTime?
+  profilePhoto       String?       // URL/path to profile photo
   address            String?
   notes              String?
   lgpdConsent        Boolean       @default(false)
@@ -96,6 +98,22 @@ model Client {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   appointments       Appointment[]
+  photos             ClientPhoto[]
+}
+
+model ClientPhoto {
+  id            Int          @id @default(autoincrement())
+  clientId      Int
+  appointmentId Int?
+  photoUrl      String
+  description   String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  client        Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([appointmentId])
 }
 
 model Policy {
@@ -162,6 +180,7 @@ model Appointment {
   client            Client          @relation(fields: [clientId], references: [id])
   service           Service         @relation(fields: [serviceId], references: [id])
   variant           ServiceVariant? @relation(fields: [variantId], references: [id])
+  clientPhotos      ClientPhoto[]
 
   @@index([scheduledStart])
   @@index([status])

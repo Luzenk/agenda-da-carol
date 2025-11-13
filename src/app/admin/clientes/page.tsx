@@ -1,17 +1,22 @@
 "use client"
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, Users, Phone, Mail } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Loader2, Search, Users, Phone, Mail, Plus, Eye } from 'lucide-react';
+import { ClientForm } from '@/components/admin/ClientForm';
 import { formatPhone, formatCurrency } from '@/lib/utils';
 
 export default function ClientesPage() {
+  const router = useRouter();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => {
     fetchClients();
@@ -45,9 +50,15 @@ export default function ClientesPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Clientes</h1>
-        <p className="text-gray-600">Gerencie sua base de clientes</p>
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Clientes</h1>
+          <p className="text-gray-600">Gerencie sua base de clientes</p>
+        </div>
+        <Button onClick={() => setShowAddDialog(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Cliente
+        </Button>
       </div>
 
       {/* Stats */}
@@ -116,7 +127,8 @@ export default function ClientesPage() {
               {filteredClients.map((client) => (
                 <div
                   key={client.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                  onClick={() => router.push(`/admin/clientes/${client.id}`)}
                 >
                   <div className="flex-1 mb-3 sm:mb-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -138,13 +150,25 @@ export default function ClientesPage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-sm text-muted-foreground">
-                      {client.totalVisits} visitas
-                    </p>
-                    <p className="font-semibold text-purple-600">
-                      {formatCurrency(client.totalSpent)}
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-left sm:text-right">
+                      <p className="text-sm text-muted-foreground">
+                        {client.totalVisits} visitas
+                      </p>
+                      <p className="font-semibold text-purple-600">
+                        {formatCurrency(client.totalSpent)}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/admin/clientes/${client.id}`);
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -152,6 +176,22 @@ export default function ClientesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Client Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+          </DialogHeader>
+          <ClientForm
+            onSuccess={() => {
+              setShowAddDialog(false);
+              fetchClients();
+            }}
+            onCancel={() => setShowAddDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
