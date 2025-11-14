@@ -16,6 +16,7 @@ interface Service {
 interface BusinessInfo {
   businessName: string;
   whatsappNumber: string;
+  instagramHandle: string;
 }
 
 export default function Home() {
@@ -49,6 +50,10 @@ export default function Home() {
   const whatsappLink = businessInfo?.whatsappNumber 
     ? `https://wa.me/${businessInfo.whatsappNumber}`
     : 'https://wa.me/5511999999999';
+
+  const instagramLink = businessInfo?.instagramHandle
+    ? `https://instagram.com/${businessInfo.instagramHandle.replace('@', '')}`
+    : 'https://instagram.com/caroltrancista';
 
   const displayName = businessInfo?.businessName || 'Agenda da Carol';
 
@@ -215,7 +220,7 @@ export default function Home() {
               Agendar
             </Link>
             <span>•</span>
-            <a href="https://instagram.com/@caroltrancista" target="_blank" rel="noopener noreferrer" className="hover:text-purple-600">
+            <a href={instagramLink} target="_blank" rel="noopener noreferrer" className="hover:text-purple-600">
               Instagram
             </a>
             <span>•</span>

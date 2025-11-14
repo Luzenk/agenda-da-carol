@@ -28,6 +28,7 @@ export default function ConfigPage() {
     address: '',
     phone: '',
     whatsappNumber: '',
+    instagramHandle: '',
     pixKey: '',
     pixName: '',
     pixCity: ''
@@ -51,6 +52,7 @@ export default function ConfigPage() {
           address: data.business_info.address || '',
           phone: data.business_info.phone || '',
           whatsappNumber: data.business_info.whatsappNumber || '',
+          instagramHandle: data.business_info.instagramHandle || '',
           pixKey: data.business_info.pixKey || '',
           pixName: data.business_info.pixName || '',
           pixCity: data.business_info.pixCity || ''
@@ -199,7 +201,7 @@ export default function ConfigPage() {
                 Informações do Negócio
               </CardTitle>
               <CardDescription>
-                Configure as informações básicas do seu negócio
+                Configure as informações básicas do seu negócio que aparecerão no site público
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -243,6 +245,19 @@ export default function ConfigPage() {
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Digite apenas números com código do país (Ex: 5511987654321)
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="instagramHandle">Instagram</Label>
+                <Input
+                  id="instagramHandle"
+                  value={businessSettings.instagramHandle}
+                  onChange={(e) => setBusinessSettings({ ...businessSettings, instagramHandle: e.target.value })}
+                  placeholder="@caroltrancista"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Digite o @ do Instagram (Ex: @caroltrancista)
                 </p>
               </div>
 
