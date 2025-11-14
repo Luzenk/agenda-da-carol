@@ -3,6 +3,7 @@ import "./globals.css";
 import VisualEditsMessenger from "../visual-edits/VisualEditsMessenger";
 import ErrorReporter from "@/components/ErrorReporter";
 import Script from "next/script";
+import { WhatsAppFloatingButton } from "@/components/WhatsAppFloatingButton";
 
 export const metadata: Metadata = {
   title: "Agenda da Carol - Especialista em Tranças Afro",
@@ -29,6 +30,7 @@ export default function RootLayout({
           data-custom-data='{"appName": "YourApp", "version": "1.0.0", "greeting": "hi"}'
         />
         {children}
+        <WhatsAppFloatingButton />
         <VisualEditsMessenger />
       </body>
     </html>

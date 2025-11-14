@@ -15,7 +15,18 @@ export async function GET() {
     }
 
     const businessInfo = JSON.parse(settings.value);
-    return NextResponse.json(businessInfo);
+    
+    // Padronizar resposta: usar whatsappNumber se existir, senão usar phone
+    const response = {
+      businessName: businessInfo.businessName || businessInfo.name || 'Agenda da Carol',
+      whatsappNumber: businessInfo.whatsappNumber || businessInfo.phone || '5511999999999',
+      instagramHandle: businessInfo.instagramHandle || businessInfo.instagram || '@caroltrancista',
+      address: businessInfo.address || '',
+      email: businessInfo.email || '',
+      description: businessInfo.description || ''
+    };
+    
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error fetching business info:', error);
     return NextResponse.json(
