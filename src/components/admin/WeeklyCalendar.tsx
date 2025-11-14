@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Lock } from 'lucide-react';
 import { formatTime } from '@/lib/utils';
 
 interface Appointment {
@@ -89,13 +89,61 @@ export function WeeklyCalendar({ onAppointmentClick, onTimeSlotClick }: WeeklyCa
 
   const getAppointmentsForSlot = (date: Date, hour: number) => {
     return appointments.filter(apt => {
-      const aptDate = new Date(apt.scheduledStart);
-      const aptHour = aptDate.getHours();
-      const aptMinute = aptDate.getMinutes();
+      const aptStart = new Date(apt.scheduledStart);
+      const aptEnd = new Date(apt.scheduledEnd);
       
+      // Create slot time range (hour:00 to hour:59)
+      const slotStart = new Date(date);
+      slotStart.setHours(hour, 0, 0, 0);
+      
+      const slotEnd = new Date(date);
+      slotEnd.setHours(hour, 59, 59, 999);
+      
+      // Check if appointment overlaps with this slot
       return (
-        aptDate.toDateString() === date.toDateString() &&
-        aptHour === hour
+        aptStart.toDateString() === date.toDateString() &&
+        aptStart < slotEnd &&
+        aptEnd > slotStart
+      );
+    });
+  };
+
+  // New function to check if slot is blocked by an appointment
+  const isSlotBlocked = (date: Date, hour: number) => {
+    return appointments.some(apt => {
+      const aptStart = new Date(apt.scheduledStart);
+      const aptEnd = new Date(apt.scheduledEnd);
+      const aptStartHour = aptStart.getHours();
+      
+      // Create slot time
+      const slotStart = new Date(date);
+      slotStart.setHours(hour, 0, 0, 0);
+      
+      const slotEnd = new Date(date);
+      slotEnd.setHours(hour, 59, 59, 999);
+      
+      // Slot is blocked if:
+      // 1. It's the same day
+      // 2. Appointment ends after slot starts
+      // 3. Appointment starts before slot ends
+      // 4. Appointment is not cancelled/no-show
+      return (
+        aptStart.toDateString() === date.toDateString() &&
+        aptEnd > slotStart &&
+        aptStart < slotEnd &&
+        apt.status !== 'cancelled' &&
+        apt.status !== 'no_show'
+      );
+    });
+  };
+
+  // New function to get the appointment that starts in this slot
+  const getAppointmentStartingInSlot = (date: Date, hour: number) => {
+    return appointments.find(apt => {
+      const aptStart = new Date(apt.scheduledStart);
+      return (
+        aptStart.toDateString() === date.toDateString() &&
+        aptStart.getHours() === hour
       );
     });
   };
@@ -175,15 +223,16 @@ export function WeeklyCalendar({ onAppointmentClick, onTimeSlotClick }: WeeklyCa
                 {hour}:00
               </div>
               {weekDates.map((date, idx) => {
-                const slotAppointments = getAppointmentsForSlot(date, hour);
-                const isEmpty = slotAppointments.length === 0;
+                const appointmentStartingHere = getAppointmentStartingInSlot(date, hour);
+                const isBlocked = isSlotBlocked(date, hour);
+                const isEmpty = !isBlocked;
 
                 return (
                   <div
                     key={idx}
                     className={`min-h-[80px] p-1 border-r last:border-r-0 relative ${
                       isEmpty ? 'hover:bg-gray-50 cursor-pointer' : ''
-                    }`}
+                    } ${isBlocked && !appointmentStartingHere ? 'bg-gray-100' : ''}`}
                     onClick={() => {
                       if (isEmpty && onTimeSlotClick) {
                         onTimeSlotClick(date, `${hour}:00`);
@@ -195,30 +244,38 @@ export function WeeklyCalendar({ onAppointmentClick, onTimeSlotClick }: WeeklyCa
                         <Plus className="w-5 h-5 text-gray-400" />
                       </div>
                     )}
-                    {slotAppointments.map(apt => {
-                      const duration = apt.variant.durationMin;
-                      const heightInPx = (duration / 60) * 80;
-
-                      return (
-                        <div
-                          key={apt.id}
-                          className={`p-2 rounded border-l-4 mb-1 cursor-pointer hover:shadow-md transition-shadow ${getStatusColor(
-                            apt.status
-                          )} text-white text-xs`}
-                          style={{ minHeight: `${heightInPx}px` }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onAppointmentClick) {
-                              onAppointmentClick(apt);
-                            }
-                          }}
-                        >
-                          <div className="font-semibold truncate">{apt.client.name}</div>
-                          <div className="truncate opacity-90">{apt.service.name}</div>
-                          <div className="opacity-80">{formatTime(apt.scheduledStart)}</div>
+                    
+                    {/* Show blocked indicator if slot is occupied but appointment doesn't start here */}
+                    {isBlocked && !appointmentStartingHere && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Lock className="w-4 h-4 text-gray-400" />
+                      </div>
+                    )}
+                    
+                    {/* Show appointment card only where it starts */}
+                    {appointmentStartingHere && (
+                      <div
+                        className={`p-2 rounded border-l-4 cursor-pointer hover:shadow-md transition-shadow ${getStatusColor(
+                          appointmentStartingHere.status
+                        )} text-white text-xs`}
+                        style={{ 
+                          minHeight: `${(appointmentStartingHere.variant.durationMin / 60) * 80}px` 
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onAppointmentClick) {
+                            onAppointmentClick(appointmentStartingHere);
+                          }
+                        }}
+                      >
+                        <div className="font-semibold truncate">{appointmentStartingHere.client.name}</div>
+                        <div className="truncate opacity-90">{appointmentStartingHere.service.name}</div>
+                        <div className="opacity-80">{formatTime(appointmentStartingHere.scheduledStart)}</div>
+                        <div className="opacity-80 text-[10px] mt-1">
+                          {appointmentStartingHere.variant.durationMin} min
                         </div>
-                      );
-                    })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -244,6 +301,11 @@ export function WeeklyCalendar({ onAppointmentClick, onTimeSlotClick }: WeeklyCa
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-red-500 rounded"></div>
           <span>Cancelado</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-gray-400 rounded"></div>
+          <Lock className="w-3 h-3" />
+          <span>Ocupado</span>
         </div>
       </div>
     </div>

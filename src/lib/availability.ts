@@ -88,31 +88,27 @@ export async function getAvailableSlots(
 
       // Check if slot end is within working hours
       if (slotEnd <= ruleEnd) {
-        // Check if slot conflicts with existing appointments
+        // Check if slot conflicts with existing appointments (CORRECTED LOGIC)
         const hasConflict = appointments.some((apt) => {
           const aptStart = new Date(apt.scheduledStart);
           const aptEnd = new Date(apt.scheduledEnd);
           
           // Add buffer to appointment end
-          aptEnd.setMinutes(aptEnd.getMinutes() + bufferMinutes);
+          const aptEndWithBuffer = new Date(aptEnd);
+          aptEndWithBuffer.setMinutes(aptEndWithBuffer.getMinutes() + bufferMinutes);
 
-          return (
-            (currentSlot >= aptStart && currentSlot < aptEnd) ||
-            (slotEnd > aptStart && slotEnd <= aptEnd) ||
-            (currentSlot <= aptStart && slotEnd >= aptEnd)
-          );
+          // Correct overlap detection: 
+          // Two intervals overlap if: slotEnd > aptStart AND currentSlot < aptEndWithBuffer
+          return slotEnd > aptStart && currentSlot < aptEndWithBuffer;
         });
 
-        // Check if slot conflicts with blocks
+        // Check if slot conflicts with blocks (CORRECTED LOGIC)
         const hasBlock = blocks.some((block) => {
           const blockStart = new Date(block.startTime);
           const blockEnd = new Date(block.endTime);
 
-          return (
-            (currentSlot >= blockStart && currentSlot < blockEnd) ||
-            (slotEnd > blockStart && slotEnd <= blockEnd) ||
-            (currentSlot <= blockStart && slotEnd >= blockEnd)
-          );
+          // Correct overlap detection
+          return slotEnd > blockStart && currentSlot < blockEnd;
         });
 
         slots.push({
@@ -139,13 +135,14 @@ export async function isSlotAvailable(
   start: Date,
   end: Date
 ): Promise<boolean> {
+  // CORRECTED: Check for any overlapping appointments
   const appointments = await prisma.appointment.findMany({
     where: {
       scheduledStart: {
-        lt: end,
+        lt: end, // Appointment starts before our slot ends
       },
       scheduledEnd: {
-        gt: start,
+        gt: start, // Appointment ends after our slot starts
       },
       status: {
         notIn: ['cancelled', 'no_show'],
@@ -153,13 +150,14 @@ export async function isSlotAvailable(
     },
   });
 
+  // CORRECTED: Check for any overlapping blocks
   const blocks = await prisma.block.findMany({
     where: {
       startTime: {
-        lt: end,
+        lt: end, // Block starts before our slot ends
       },
       endTime: {
-        gt: start,
+        gt: start, // Block ends after our slot starts
       },
     },
   });
