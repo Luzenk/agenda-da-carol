@@ -1,16 +1,64 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Clock, Heart, Sparkles, Shield, MessageCircle } from 'lucide-react';
+import { Calendar, Clock, Heart, Sparkles, Shield, MessageCircle, Loader2 } from 'lucide-react';
+
+interface Service {
+  id: number;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+}
+
+interface BusinessInfo {
+  businessName: string;
+  whatsappNumber: string;
+}
 
 export default function Home() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [servicesRes, businessRes] = await Promise.all([
+        fetch('/api/services'),
+        fetch('/api/settings/business_info')
+      ]);
+
+      const servicesData = await servicesRes.json();
+      const businessData = await businessRes.json();
+
+      setServices(servicesData.filter((s: Service) => s.imageUrl));
+      setBusinessInfo(businessData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const whatsappLink = businessInfo?.whatsappNumber 
+    ? `https://wa.me/${businessInfo.whatsappNumber}`
+    : 'https://wa.me/5511999999999';
+
+  const displayName = businessInfo?.businessName || 'Agenda da Carol';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50">
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-5xl md:text-7xl font-bold text-purple-900 mb-6">
-            Agenda da Carol
+            {displayName}
           </h1>
           <p className="text-xl md:text-2xl text-purple-700 mb-8">
             Especialista em tranças afro ✨
@@ -26,7 +74,7 @@ export default function Home() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6">
-              <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer">
+              <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="w-5 h-5 mr-2" />
                 WhatsApp
               </a>
@@ -93,49 +141,43 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-          {[
-            {
-              name: 'Box Braids',
-              image: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&q=80',
-              description: 'Tranças individuais versáteis',
-            },
-            {
-              name: 'Nagô',
-              image: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=400&q=80',
-              description: 'Tranças rentes ao couro',
-            },
-            {
-              name: 'Twists',
-              image: 'https://images.unsplash.com/photo-1616683693971-12d344ab4efc?w=400&q=80',
-              description: 'Tranças retorcidas naturais',
-            },
-            {
-              name: 'Crochet',
-              image: 'https://images.unsplash.com/photo-1595475884562-073c30d45670?w=400&q=80',
-              description: 'Aplicação rápida e prática',
-            },
-          ].map((service) => (
-            <Card key={service.name} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div
-                className="h-48 bg-cover bg-center"
-                style={{ backgroundImage: `url(${service.image})` }}
-              />
-              <CardHeader>
-                <CardTitle className="text-lg">{service.name}</CardTitle>
-                <CardDescription>{service.description}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+          </div>
+        ) : services.length > 0 ? (
+          <>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+              {services.slice(0, 4).map((service) => (
+                <Card key={service.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <div
+                    className="h-48 bg-cover bg-center"
+                    style={{ 
+                      backgroundImage: `url(${service.imageUrl})`,
+                      backgroundColor: '#f3f4f6'
+                    }}
+                  />
+                  <CardHeader>
+                    <CardTitle className="text-lg">{service.name}</CardTitle>
+                    <CardDescription>{service.description || 'Serviço de qualidade'}</CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
 
-        <div className="text-center mt-10">
-          <Button asChild size="lg" variant="outline">
-            <Link href="/agendar">
-              Ver Todos os Serviços
-            </Link>
-          </Button>
-        </div>
+            <div className="text-center mt-10">
+              <Button asChild size="lg" variant="outline">
+                <Link href="/agendar">
+                  Ver Todos os Serviços
+                </Link>
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Nenhum serviço disponível no momento</p>
+          </div>
+        )}
       </section>
 
       {/* CTA Section */}
@@ -166,7 +208,7 @@ export default function Home() {
             <Heart className="w-4 h-4 inline text-pink-500" /> Feito com carinho por Carol
           </p>
           <p className="text-sm">
-            © 2024 Agenda da Carol. Todos os direitos reservados.
+            © 2024 {displayName}. Todos os direitos reservados.
           </p>
           <div className="mt-4 space-x-4 text-sm">
             <Link href="/agendar" className="hover:text-purple-600">
@@ -177,7 +219,7 @@ export default function Home() {
               Instagram
             </a>
             <span>•</span>
-            <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" className="hover:text-purple-600">
+            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="hover:text-purple-600">
               WhatsApp
             </a>
           </div>
