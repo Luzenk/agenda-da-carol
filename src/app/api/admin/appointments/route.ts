@@ -93,44 +93,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for overlapping appointments
+    // Two intervals overlap if: start1 < end2 AND start2 < end1
     const start = new Date(scheduledStart);
     const end = new Date(scheduledEnd);
 
     const overlapping = await prisma.appointment.findFirst({
       where: {
         AND: [
-          {
-            OR: [
-              {
-                AND: [
-                  { scheduledStart: { lte: start } },
-                  { scheduledEnd: { gt: start } }
-                ]
-              },
-              {
-                AND: [
-                  { scheduledStart: { lt: end } },
-                  { scheduledEnd: { gte: end } }
-                ]
-              },
-              {
-                AND: [
-                  { scheduledStart: { gte: start } },
-                  { scheduledEnd: { lte: end } }
-                ]
-              }
-            ]
-          },
-          {
-            status: { notIn: ['cancelled', 'no_show'] }
-          }
+          { scheduledStart: { lt: end } },
+          { scheduledEnd: { gt: start } },
+          { status: { notIn: ['cancelled', 'no_show'] } }
         ]
       }
     });
 
     if (overlapping) {
+      console.error('Conflict detected:', {
+        newAppointment: { start, end },
+        conflictingAppointment: {
+          id: overlapping.id,
+          start: overlapping.scheduledStart,
+          end: overlapping.scheduledEnd
+        }
+      });
       return NextResponse.json(
-        { error: 'Time slot already booked' },
+        { 
+          error: 'Time slot already booked',
+          conflictingAppointmentId: overlapping.id,
+          conflictingStart: overlapping.scheduledStart,
+          conflictingEnd: overlapping.scheduledEnd
+        },
         { status: 409 }
       );
     }
