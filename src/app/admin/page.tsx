@@ -15,15 +15,23 @@ export default function AdminDashboard() {
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
 
   useEffect(() => {
+    console.log('[DASHBOARD] Verificando autenticação...');
+    
     // Check authentication
     const token = localStorage.getItem('admin_token');
+    console.log('[DASHBOARD] Token encontrado:', token ? 'SIM (' + token.substring(0, 20) + '...)' : 'NÃO');
+    
     if (!token) {
+      console.log('[DASHBOARD] Sem token, redirecionando para login...');
+      setAuthError('Sem token de autenticação');
       router.push('/admin/login');
       return;
     }
     
+    console.log('[DASHBOARD] Token presente, buscando dados...');
     fetchDashboardData();
   }, [router]);
 
@@ -31,24 +39,37 @@ export default function AdminDashboard() {
     const token = localStorage.getItem('admin_token');
     
     if (!token) {
+      console.log('[DASHBOARD] Token perdido antes do fetch!');
+      setAuthError('Token perdido');
       router.push('/admin/login');
       return;
     }
 
+    console.log('[DASHBOARD] Preparando headers com token...');
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
 
     try {
+      console.log('[DASHBOARD] Fazendo fetch para APIs...');
+      
       const [statsRes, todayRes, pendingRes] = await Promise.all([
         fetch('/api/admin/stats', { headers }),
         fetch('/api/admin/appointments/today', { headers }),
         fetch('/api/admin/appointments/pending', { headers }),
       ]);
 
+      console.log('[DASHBOARD] Response status:', {
+        stats: statsRes.status,
+        today: todayRes.status,
+        pending: pendingRes.status
+      });
+
       // Check for auth errors
       if (statsRes.status === 401 || todayRes.status === 401 || pendingRes.status === 401) {
+        console.error('[DASHBOARD] Erro 401 - token inválido ou expirado');
+        setAuthError('Token inválido (401)');
         localStorage.removeItem('admin_token');
         router.push('/admin/login');
         return;
@@ -60,11 +81,19 @@ export default function AdminDashboard() {
         pendingRes.json(),
       ]);
 
+      console.log('[DASHBOARD] Dados recebidos:', {
+        stats: statsData,
+        todayCount: todayData.length,
+        pendingCount: pendingData.length
+      });
+
       setStats(statsData);
       setTodayAppointments(todayData);
       setPendingAppointments(pendingData);
+      console.log('[DASHBOARD] Dashboard carregado com sucesso!');
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('[DASHBOARD] Erro ao buscar dados:', error);
+      setAuthError('Erro ao carregar: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -99,8 +128,11 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex flex-col items-center justify-center h-full gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        {authError && (
+          <p className="text-sm text-red-600">Debug: {authError}</p>
+        )}
       </div>
     );
   }
