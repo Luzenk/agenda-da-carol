@@ -56,7 +56,7 @@ export default function AppointmentDetailPage() {
 
   const fetchAppointment = async () => {
     try {
-      const response = await fetch(`/api/appointments/${params.id}`);
+      const response = await fetch(`/api/admin/appointments/${params.id}`);
       const data = await response.json();
       
       if (data.error) {
@@ -80,7 +80,7 @@ export default function AppointmentDetailPage() {
   const handleUpdateStatus = async () => {
     setUpdating(true);
     try {
-      const response = await fetch(`/api/appointments/${params.id}`, {
+      const response = await fetch(`/api/admin/appointments/${params.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -108,7 +108,7 @@ export default function AppointmentDetailPage() {
     if (!confirm('Tem certeza que deseja excluir este agendamento?')) return;
 
     try {
-      const response = await fetch(`/api/appointments/${params.id}`, {
+      const response = await fetch(`/api/admin/appointments/${params.id}`, {
         method: 'DELETE'
       });
 
