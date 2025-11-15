@@ -1,7 +1,8 @@
+import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-// Store active tokens in memory (in production, use Redis or database)
-const activeSessions = new Set<string>();
+const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-key-change-in-production';
+const JWT_EXPIRES_IN = '7d'; // Token válido por 7 dias
 
 export async function verifyAdminPassword(password: string): Promise<boolean> {
   const adminPassword = process.env.ADMIN_PASSWORD;
@@ -24,18 +25,33 @@ export async function verifyAdminPassword(password: string): Promise<boolean> {
 }
 
 export function createAdminSession(): string {
-  const sessionToken = generateSessionToken();
-  activeSessions.add(sessionToken);
-  return sessionToken;
+  // Create JWT token with admin claim
+  const token = jwt.sign(
+    { 
+      role: 'admin',
+      iat: Math.floor(Date.now() / 1000)
+    },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+  
+  return token;
 }
 
 export function clearAdminSession(token: string): void {
-  activeSessions.delete(token);
+  // JWT is stateless, no need to clear
+  // Token will expire automatically
 }
 
 export function isValidAdminSession(token: string | null): boolean {
   if (!token) return false;
-  return activeSessions.has(token);
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { role: string };
+    return decoded.role === 'admin';
+  } catch {
+    return false;
+  }
 }
 
 export async function isAdminAuthenticated(authHeader: string | null): Promise<boolean> {
@@ -43,8 +59,4 @@ export async function isAdminAuthenticated(authHeader: string | null): Promise<b
   
   const token = authHeader.replace('Bearer ', '');
   return isValidAdminSession(token);
-}
-
-function generateSessionToken(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36) + Math.random().toString(36).substring(2);
 }
