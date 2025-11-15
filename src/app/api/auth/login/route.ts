@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await createAdminSession();
+    const token = createAdminSession();
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, token });
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

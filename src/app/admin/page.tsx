@@ -7,24 +7,52 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Calendar, Clock, Users, DollarSign, AlertCircle, TrendingUp } from 'lucide-react';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState<any>(null);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check authentication
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      router.push('/admin/login');
+      return;
+    }
+    
     fetchDashboardData();
-  }, []);
+  }, [router]);
 
   const fetchDashboardData = async () => {
+    const token = localStorage.getItem('admin_token');
+    
+    if (!token) {
+      router.push('/admin/login');
+      return;
+    }
+
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+
     try {
       const [statsRes, todayRes, pendingRes] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/admin/appointments/today'),
-        fetch('/api/admin/appointments/pending'),
+        fetch('/api/admin/stats', { headers }),
+        fetch('/api/admin/appointments/today', { headers }),
+        fetch('/api/admin/appointments/pending', { headers }),
       ]);
+
+      // Check for auth errors
+      if (statsRes.status === 401 || todayRes.status === 401 || pendingRes.status === 401) {
+        localStorage.removeItem('admin_token');
+        router.push('/admin/login');
+        return;
+      }
 
       const [statsData, todayData, pendingData] = await Promise.all([
         statsRes.json(),
