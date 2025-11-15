@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const appointment = await prisma.appointment.findUnique({
-      where: { id: parseInt(params.id) },
+      where: { id: parseInt(id) },
       include: {
         client: {
           select: {
@@ -47,14 +48,77 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
     const { status, paymentStatus, internalNotes, scheduledStart, scheduledEnd } = body;
+    const { id } = await params;
+    const appointmentId = parseInt(id);
+
+    // If rescheduling, check for conflicts
+    if (scheduledStart && scheduledEnd) {
+      const newStart = new Date(scheduledStart);
+      const newEnd = new Date(scheduledEnd);
+
+      // Get buffer from settings
+      const settings = await prisma.settings.findFirst();
+      const bufferMin = settings?.defaultBufferMin || 0;
+      const bufferMs = bufferMin * 60 * 1000;
+
+      // Check for overlapping appointments (excluding current appointment)
+      const conflictingAppointments = await prisma.appointment.findMany({
+        where: {
+          id: { not: appointmentId },
+          status: { notIn: ['cancelled', 'no_show'] },
+          OR: [
+            {
+              AND: [
+                { scheduledStart: { lte: newStart } },
+                { scheduledEnd: { gt: newStart } }
+              ]
+            },
+            {
+              AND: [
+                { scheduledStart: { lt: newEnd } },
+                { scheduledEnd: { gte: newEnd } }
+              ]
+            },
+            {
+              AND: [
+                { scheduledStart: { gte: newStart } },
+                { scheduledEnd: { lte: newEnd } }
+              ]
+            }
+          ]
+        }
+      });
+
+      if (conflictingAppointments.length > 0) {
+        return NextResponse.json(
+          { error: 'Horário não disponível. Já existe um agendamento neste período.' },
+          { status: 409 }
+        );
+      }
+
+      // Check blocks
+      const blocks = await prisma.block.findMany({
+        where: {
+          startTime: { lt: newEnd },
+          endTime: { gt: newStart }
+        }
+      });
+
+      if (blocks.length > 0) {
+        return NextResponse.json(
+          { error: 'Horário bloqueado. Este período não está disponível.' },
+          { status: 409 }
+        );
+      }
+    }
 
     const appointment = await prisma.appointment.update({
-      where: { id: parseInt(params.id) },
+      where: { id: appointmentId },
       data: {
         ...(status !== undefined && { status }),
         ...(paymentStatus !== undefined && { paymentStatus }),
@@ -82,11 +146,12 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await prisma.appointment.delete({
-      where: { id: parseInt(params.id) }
+      where: { id: parseInt(id) }
     });
 
     return NextResponse.json({ success: true });

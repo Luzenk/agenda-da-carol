@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar, Clock, User, Phone, Mail, DollarSign, MessageSquare, Trash2, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Calendar, Clock, User, Phone, Mail, DollarSign, MessageSquare, Trash2, ArrowLeft, CheckCircle, XCircle, CalendarClock } from 'lucide-react';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 import { toast } from 'sonner';
+import RescheduleDialog from '@/components/admin/RescheduleDialog';
 
 interface Appointment {
   id: number;
@@ -45,6 +46,7 @@ export default function AppointmentDetailPage() {
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
   
   const [status, setStatus] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('');
@@ -380,6 +382,16 @@ export default function AppointmentDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button
+                onClick={() => setRescheduleOpen(true)}
+                className="w-full"
+                variant="outline"
+                disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+              >
+                <CalendarClock className="w-4 h-4 mr-2" />
+                Reagendar
+              </Button>
+
+              <Button
                 onClick={handleWhatsApp}
                 className="w-full"
                 variant="outline"
@@ -400,6 +412,16 @@ export default function AppointmentDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Reschedule Dialog */}
+      {appointment && (
+        <RescheduleDialog
+          open={rescheduleOpen}
+          onOpenChange={setRescheduleOpen}
+          appointment={appointment}
+          onSuccess={fetchAppointment}
+        />
+      )}
     </div>
   );
 }
