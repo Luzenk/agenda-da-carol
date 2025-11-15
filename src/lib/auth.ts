@@ -1,11 +1,14 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-key-change-in-production';
+// Fallbacks automáticos para funcionar sem configuração no Vercel
+const JWT_SECRET = process.env.JWT_SECRET || 'carol-agenda-jwt-secret-2024-production';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'carol123';
 const JWT_EXPIRES_IN = '7d'; // Token válido por 7 dias
 
 export async function verifyAdminPassword(password: string): Promise<boolean> {
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  // Usa ADMIN_PASSWORD com fallback
+  const adminPassword = ADMIN_PASSWORD;
   
   if (!adminPassword) {
     return false;
