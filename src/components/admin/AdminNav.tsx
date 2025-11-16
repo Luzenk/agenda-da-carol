@@ -2,36 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { usePathname } from 'next/navigation';
 import { 
   Home, 
   Calendar, 
   Users, 
   Package, 
-  Settings, 
-  LogOut,
+  Settings,
   BarChart3
 } from 'lucide-react';
 
 export default function AdminNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/admin/login');
-      router.refresh();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   const navItems = [
     { href: '/admin', icon: Home, label: 'Dashboard' },
@@ -75,17 +62,6 @@ export default function AdminNav() {
             );
           })}
         </nav>
-
-        <div className="p-4 border-t border-purple-800">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-purple-100 hover:bg-purple-800/50 hover:text-white"
-            onClick={handleLogout}
-          >
-            <LogOut className="w-5 h-5 mr-3" />
-            Sair
-          </Button>
-        </div>
       </aside>
 
       {/* Mobile Bottom Navigation */}
@@ -112,16 +88,8 @@ export default function AdminNav() {
       </nav>
 
       {/* Mobile Header */}
-      <header className="md:hidden sticky top-0 bg-purple-900 text-white px-4 py-3 flex items-center justify-between z-40">
+      <header className="md:hidden sticky top-0 bg-purple-900 text-white px-4 py-3 z-40">
         <h1 className="font-bold text-lg">Agenda da Carol</h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-white hover:bg-purple-800"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-4 h-4" />
-        </Button>
       </header>
     </>
   );
