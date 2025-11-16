@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAdminAuth } from '@/lib/admin-auth-helper';
 
 export async function GET(request: NextRequest) {
-  const authError = await verifyAdminAuth(request);
-  if (authError) return authError;
-
   try {
     const now = new Date();
 

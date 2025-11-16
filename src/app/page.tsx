@@ -23,6 +23,7 @@ export default function Home() {
   const [services, setServices] = useState<Service[]>([]);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -30,18 +31,27 @@ export default function Home() {
 
   const fetchData = async () => {
     try {
+      setError(null);
       const [servicesRes, businessRes] = await Promise.all([
         fetch('/api/services'),
         fetch('/api/settings/business_info')
       ]);
 
+      if (!servicesRes.ok || !businessRes.ok) {
+        throw new Error('Failed to fetch data');
+      }
+
       const servicesData = await servicesRes.json();
       const businessData = await businessRes.json();
 
-      setServices(servicesData.filter((s: Service) => s.imageUrl));
-      setBusinessInfo(businessData);
+      setServices(Array.isArray(servicesData) ? servicesData.filter((s: Service) => s.imageUrl) : []);
+      setBusinessInfo(businessData || null);
     } catch (error) {
       console.error('Error fetching data:', error);
+      setError('Erro ao carregar dados. Por favor, recarregue a página.');
+      // Set default values to allow page to render
+      setServices([]);
+      setBusinessInfo(null);
     } finally {
       setLoading(false);
     }
@@ -145,6 +155,15 @@ export default function Home() {
             Especializada em tranças afro com excelência e carinho
           </p>
         </div>
+
+        {error && (
+          <div className="max-w-md mx-auto mb-8 p-4 bg-red-50 border border-red-200 rounded-lg text-center">
+            <p className="text-red-600">{error}</p>
+            <Button onClick={fetchData} variant="outline" size="sm" className="mt-2">
+              Tentar Novamente
+            </Button>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
