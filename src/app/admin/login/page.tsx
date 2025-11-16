@@ -7,37 +7,36 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Lock } from 'lucide-react';
+import { Loader2, Lock, CheckCircle, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [debugInfo, setDebugInfo] = useState('');
+  const [step, setStep] = useState('');
 
   useEffect(() => {
-    // Verificar se localStorage está acessível
-    try {
-      const test = localStorage.getItem('test');
-      localStorage.setItem('test', 'working');
-      localStorage.removeItem('test');
-      setDebugInfo('✓ localStorage acessível');
-    } catch (e: any) {
-      setDebugInfo('✗ localStorage bloqueado: ' + e.message);
-      console.error('localStorage error:', e);
+    console.log('[LOGIN PAGE] Montado');
+    // Verificar se já está logado
+    const token = localStorage.getItem('admin_token');
+    if (token) {
+      console.log('[LOGIN PAGE] Token encontrado, redirecionando...');
+      window.location.href = '/admin';
     }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[LOGIN] Iniciando processo de login...');
+    
     setError('');
     setLoading(true);
-
-    console.log('[LOGIN] Iniciando login...');
+    setStep('🔄 Verificando senha...');
 
     try {
-      console.log('[LOGIN] Fazendo fetch para /api/auth/login');
+      console.log('[LOGIN] Fazendo requisição para /api/auth/login');
       
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -48,53 +47,67 @@ export default function AdminLoginPage() {
       });
 
       console.log('[LOGIN] Response status:', response.status);
-      
+
       const data = await response.json();
       console.log('[LOGIN] Response data:', data);
 
       if (!response.ok) {
-        console.error('[LOGIN] Login falhou:', data.error);
-        throw new Error(data.error || 'Login failed');
+        console.error('[LOGIN] Erro na resposta:', response.status, data);
+        setStep('');
+        if (response.status === 401) {
+          setError('❌ Senha incorreta');
+          toast.error('Senha incorreta');
+        } else {
+          setError(`❌ Erro: ${data.error || 'Erro no servidor'}`);
+          toast.error('Erro ao fazer login');
+        }
+        setLoading(false);
+        return;
       }
 
-      // Verificar se recebeu o token
       if (!data.token) {
-        console.error('[LOGIN] Token não recebido!');
-        throw new Error('Token não recebido do servidor');
+        console.error('[LOGIN] Token não recebido');
+        setError('❌ Token não recebido');
+        toast.error('Erro: token ausente');
+        setLoading(false);
+        return;
       }
 
-      console.log('[LOGIN] Token recebido:', data.token.substring(0, 20) + '...');
-
-      // Tentar salvar no localStorage
+      console.log('[LOGIN] ✓ Token recebido');
+      setStep('✅ Login OK! Salvando sessão...');
+      
+      // Salvar token
       try {
         localStorage.setItem('admin_token', data.token);
-        console.log('[LOGIN] Token salvo no localStorage');
-        
-        // Verificar se foi salvo
         const saved = localStorage.getItem('admin_token');
+        
         if (!saved) {
-          throw new Error('Token não foi salvo no localStorage');
+          throw new Error('localStorage bloqueado');
         }
-        console.log('[LOGIN] Token verificado no localStorage');
-      } catch (storageError: any) {
-        console.error('[LOGIN] Erro ao salvar no localStorage:', storageError);
-        setDebugInfo('✗ Erro localStorage: ' + storageError.message);
-        throw new Error('Não foi possível salvar o token. Verifique se cookies de terceiros estão habilitados.');
+        
+        console.log('[LOGIN] ✓ Token salvo no localStorage');
+        setStep('✅ Sessão salva! Redirecionando...');
+        toast.success('Login realizado!');
+        
+        // Aguardar um pouco para o usuário ver a mensagem
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Redirecionar usando window.location (mais confiável em iframes)
+        console.log('[LOGIN] Redirecionando para /admin');
+        window.location.href = '/admin';
+        
+      } catch (storageError) {
+        console.error('[LOGIN] Erro no localStorage:', storageError);
+        setError('❌ Cookies bloqueados. Abra em nova aba.');
+        toast.error('localStorage bloqueado. Abra em nova aba.');
+        setLoading(false);
       }
-
-      console.log('[LOGIN] Redirecionando para /admin...');
       
-      // Adicionar delay antes do redirect para garantir que localStorage foi salvo
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      router.push('/admin');
-      router.refresh();
-      
-      console.log('[LOGIN] Login completo!');
     } catch (err: any) {
-      console.error('[LOGIN] Erro capturado:', err);
-      setError(err.message || 'Senha incorreta. Tente novamente.');
-    } finally {
+      console.error('[LOGIN] Erro:', err);
+      setStep('');
+      setError(`❌ Erro: ${err.message || 'Falha na conexão'}`);
+      toast.error('Erro ao conectar');
       setLoading(false);
     }
   };
@@ -110,9 +123,6 @@ export default function AdminLoginPage() {
           <CardDescription>
             Agenda da Carol - Acesso restrito
           </CardDescription>
-          {debugInfo && (
-            <p className="text-xs text-muted-foreground mt-2">{debugInfo}</p>
-          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -123,15 +133,24 @@ export default function AdminLoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Digite a senha de administrador"
+                placeholder="Digite a senha"
                 required
                 autoFocus
+                disabled={loading}
               />
             </div>
 
             {error && (
               <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {step && !error && (
+              <Alert>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-600">{step}</AlertDescription>
               </Alert>
             )}
 
@@ -153,10 +172,8 @@ export default function AdminLoginPage() {
           </form>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>Senha padrão: carol123</p>
-            <p className="text-xs mt-2">
-              Em caso de erro, abra em nova aba ou habilite cookies de terceiros
-            </p>
+            <p>Senha padrão: <code className="bg-muted px-2 py-1 rounded">carol123</code></p>
+            <p className="text-xs mt-2">Abra o Console (F12) para ver os logs</p>
           </div>
         </CardContent>
       </Card>
