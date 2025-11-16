@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,11 @@ import {
 export default function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -36,6 +42,11 @@ export default function AdminNav() {
     { href: '/admin/config', icon: Settings, label: 'Configurações' },
   ];
 
+  const isActive = (href: string) => {
+    if (!mounted) return false;
+    return pathname === href || (href !== '/admin' && pathname.startsWith(href));
+  };
+
   return (
     <>
       {/* Desktop Sidebar */}
@@ -47,14 +58,13 @@ export default function AdminNav() {
         
         <nav className="flex-1 p-4 space-y-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || 
-                            (item.href !== '/admin' && pathname.startsWith(item.href));
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive 
+                  active 
                     ? 'bg-purple-800 text-white' 
                     : 'text-purple-100 hover:bg-purple-800/50'
                 }`}
@@ -82,14 +92,13 @@ export default function AdminNav() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
         <div className="flex justify-around items-center h-16">
           {navItems.slice(0, 5).map((item) => {
-            const isActive = pathname === item.href || 
-                            (item.href !== '/admin' && pathname.startsWith(item.href));
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
-                  isActive 
+                  active 
                     ? 'text-purple-600 bg-purple-50' 
                     : 'text-gray-500'
                 }`}
