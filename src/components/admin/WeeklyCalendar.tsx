@@ -62,10 +62,26 @@ export function WeeklyCalendar({ onAppointmentClick, onTimeSlotClick }: WeeklyCa
       const endDate = dates[6].toISOString().split('T')[0];
 
       const response = await fetch(`/api/admin/appointments/week?startDate=${startDate}&endDate=${endDate}`);
+      
+      // Check if response is ok
+      if (!response.ok) {
+        console.error('Failed to fetch appointments:', response.status);
+        setAppointments([]);
+        return;
+      }
+      
       const data = await response.json();
-      setAppointments(data);
+      
+      // Ensure data is an array
+      if (Array.isArray(data)) {
+        setAppointments(data);
+      } else {
+        console.error('API returned non-array data:', data);
+        setAppointments([]);
+      }
     } catch (error) {
       console.error('Error fetching appointments:', error);
+      setAppointments([]);
     } finally {
       setLoading(false);
     }

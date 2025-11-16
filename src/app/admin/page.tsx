@@ -20,6 +20,9 @@ export default function AdminDashboard() {
   }, []);
 
   const fetchDashboardData = async () => {
+    setLoading(true);
+    setError('');
+    
     try {
       const [statsRes, todayRes, pendingRes] = await Promise.all([
         fetch('/api/admin/stats'),
@@ -37,12 +40,17 @@ export default function AdminDashboard() {
         pendingRes.json(),
       ]);
 
-      setStats(statsData);
-      setTodayAppointments(todayData);
-      setPendingAppointments(pendingData);
+      // Validate data before setting state
+      setStats(statsData || {});
+      setTodayAppointments(Array.isArray(todayData) ? todayData : []);
+      setPendingAppointments(Array.isArray(pendingData) ? pendingData : []);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       setError('Erro ao carregar dados do dashboard');
+      // Set safe defaults
+      setStats({});
+      setTodayAppointments([]);
+      setPendingAppointments([]);
     } finally {
       setLoading(false);
     }
@@ -281,4 +289,31 @@ export default function AdminDashboard() {
       </Card>
     </div>
   );
+}
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case 'confirmed':
+      return 'bg-green-100 text-green-800';
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'completed':
+      return 'bg-blue-100 text-blue-800';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+}
+
+function getStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    pending: 'Pendente',
+    confirmed: 'Confirmado',
+    in_progress: 'Em Andamento',
+    completed: 'Concluído',
+    cancelled: 'Cancelado',
+    no_show: 'Não Compareceu',
+  };
+  return labels[status] || status;
 }
